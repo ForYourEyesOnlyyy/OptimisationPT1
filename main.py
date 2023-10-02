@@ -1,28 +1,26 @@
+def print_tableau(table):
+    """
+    Function to print the tableau in a readable format.
+    """
+    for row in table:
+        print(' | '.join(f"{val:.2f}" for val in row))
+    print('-' * 40)
+
+
 def simplex(c, A, b):
-    """
-    Simplex method to solve Linear Programming Problem
-
-    Minimize:     c^T * x
-    Subject to:   A * x <= b
-                  x >= 0
-
-    Parameters:
-    c: list of coefficients of objective function.
-    A: list of lists representing the coefficients of the inequalities.
-    b: list of RHS values of the inequalities.
-    """
-
     m, n = len(A), len(c)
     table = [row + [0] * m + [b[idx]] for idx, row in enumerate(A)]
 
-    # Add slack variables to each equation
     for i in range(m):
         table[i][n + i] = 1
 
-    # Add the objective function row
     table.append([i * -1 for i in c] + [0] * m + [0])
 
+    iteration = 1
     while any(value < 0 for value in table[-1][:-1]):
+        print(f"Iteration {iteration}")
+        print_tableau(table)
+
         pivot_col_idx = table[-1].index(min(table[-1][:-1]))
         pivot_row_idx = None
         min_ratio = float('inf')
@@ -37,6 +35,10 @@ def simplex(c, A, b):
             raise ValueError("No feasible solution exists.")
 
         pivot(table, pivot_row_idx, pivot_col_idx)
+        iteration += 1
+
+    print("Final Tableau:")
+    print_tableau(table)
 
     solution = [0] * n
     for row in table[:-1]:
@@ -48,9 +50,6 @@ def simplex(c, A, b):
 
 
 def pivot(table, row, col):
-    """
-    Pivot the tableau on the element at a given row and column
-    """
     pivot_val = table[row][col]
     table[row] = [element / pivot_val for element in table[row]]
 
