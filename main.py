@@ -1,22 +1,30 @@
+from fractions import Fraction
+
 def print_tableau(table, header_variables, basic_variables):
-    """
-    Function to print the tableau in a readable format.
-    """
-    header = ["BV"] + header_variables + ["Solution", "Ratio"]
-    row_format = "{:<12}" * (len(header))
-    print(row_format.format(*header))
-    print('-' * len(header) * 12)
+    row_format = "{:<12}" * (len(header_variables) + 3)
+    print(row_format.format("BV", *header_variables, "Solution", "Ratio"))
+    print('-' * len(header_variables) * 12)
 
     pivot_col_idx = None
     if any(value < 0 for value in table[-1][:-1]):
         pivot_col_idx = table[-1].index(min(table[-1][:-1]))
 
     for idx, row in enumerate(table[:-1]):
-        ratio = "{:.2f}".format(row[-1] / row[pivot_col_idx]) if pivot_col_idx is not None and row[
-            pivot_col_idx] > 0 else "∞"
-        print(row_format.format(basic_variables[idx], *["{:.2f}".format(val) for val in row], ratio))
-    print(row_format.format("Objective", *["{:.2f}".format(val) for val in table[-1]], "∞"))
-    print('=' * len(header) * 12)
+        ratio = str(row[-1] / row[pivot_col_idx]) if pivot_col_idx is not None and row[pivot_col_idx] > 0 else "∞"
+        print(row_format.format(basic_variables[idx], *[str(val) for val in row], ratio))
+    print(row_format.format("Objective", *[str(val) for val in table[-1]], "∞"))
+    print('=' * len(header_variables) * 12)
+
+
+def pivot(table, pivot_row_idx, pivot_col_idx):
+    pivot_element = table[pivot_row_idx][pivot_col_idx]
+    table[pivot_row_idx] = [val / pivot_element for val in table[pivot_row_idx]]
+
+    for idx, row in enumerate(table):
+        if idx == pivot_row_idx:
+            continue
+        factor = row[pivot_col_idx]
+        table[idx] = [elem - factor * table[pivot_row_idx][i] for i, elem in enumerate(row)]
 
 
 def simplex(c, A, b):
@@ -28,9 +36,9 @@ def simplex(c, A, b):
 
     table = [row + [0] * m + [b[idx]] for idx, row in enumerate(A)]
     for i in range(m):
-        table[i][n + i] = 1
+        table[i][n + i] = Fraction(1)
 
-    table.append([i * -1 for i in c] + [0] * m + [0])
+    table.append([Fraction(i * -1) for i in c] + [Fraction(0)] * m + [Fraction(0)])
 
     iteration = 1
     while any(value < 0 for value in table[-1][:-1]):
@@ -50,45 +58,29 @@ def simplex(c, A, b):
         if pivot_row_idx is None:
             raise ValueError("No feasible solution exists.")
 
-        basic_variables[pivot_row_idx], non_basic_variables[pivot_col_idx] = non_basic_variables[pivot_col_idx], \
-        basic_variables[pivot_row_idx]
+        basic_variables[pivot_row_idx], non_basic_variables[pivot_col_idx] = non_basic_variables[pivot_col_idx], basic_variables[pivot_row_idx]
         pivot(table, pivot_row_idx, pivot_col_idx)
         iteration += 1
 
     print("Final Tableau:")
     print_tableau(table, header_variables, basic_variables)
 
-    solution = [0] * n
+    solution = [Fraction(0)] * n
     for idx, variable in enumerate(basic_variables):
         if variable[0] == 'x':
             solution[int(variable[1:]) - 1] = table[idx][-1]
-    for idx, variable in enumerate(non_basic_variables):
-        if variable[0] == 'x':
-            solution[int(variable[1:]) - 1] = 0
 
     return solution, table[-1][-1]
 
-def pivot(table, pivot_row_idx, pivot_col_idx):
-    """
-    Perform pivoting on the table.
-    """
-    pivot_element = table[pivot_row_idx][pivot_col_idx]
-    table[pivot_row_idx] = [val / pivot_element for val in table[pivot_row_idx]]
-
-    for idx, row in enumerate(table):
-        if idx == pivot_row_idx:
-            continue
-        factor = row[pivot_col_idx]
-        table[idx] = [elem - factor * table[pivot_row_idx][i] for i, elem in enumerate(row)]
-
 
 if __name__ == '__main__':
-    c = [3, 2]
+    c = [Fraction(3), Fraction(2)]
     A = [
-        [1, 2],
-        [2, 1]
+        [Fraction(1), Fraction(2)],
+        [Fraction(2), Fraction(1)]
     ]
-    b = [4, 3]
+    b = [Fraction(4), Fraction(3)]
     solution, objective_value = simplex(c, A, b)
-    print(f"Optimal Solution: {solution}")
-    print(f"Optimal Value: {objective_value}")
+    print(f"Optimal Solution: [{' '.join([f'{val.numerator}/{val.denominator}' for val in solution])}]")
+    print(f"Optimal Value: {objective_value.numerator}/{objective_value.denominator}")
+
